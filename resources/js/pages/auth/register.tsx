@@ -1,7 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
-import TeamInvitationAlert from '@/components/team-invitation-alert';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import type { TeamInvitationContext } from '@/types';
 
 type Props = {
     passwordRules: string;
-    teamInvitation?: TeamInvitationContext | null;
 };
 
-export default function Register({ passwordRules, teamInvitation }: Props) {
+export default function Register({ passwordRules }: Props) {
     return (
         <>
             <Head title="Register" />
@@ -28,12 +25,6 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
-                        {teamInvitation && (
-                            <TeamInvitationAlert
-                                invitation={teamInvitation}
-                                action="Register"
-                            />
-                        )}
 
                         <div className="grid gap-6">
                             <div className="grid gap-2">
@@ -55,12 +46,28 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                             </div>
 
                             <div className="grid gap-2">
+                                <Label htmlFor="organization_name">
+                                    Organization name
+                                </Label>
+                                <Input
+                                    id="organization_name"
+                                    type="text"
+                                    required
+                                    tabIndex={2}
+                                    autoComplete="organization"
+                                    name="organization_name"
+                                    placeholder="Your business name"
+                                />
+                                <InputError message={errors.organization_name} />
+                            </div>
+
+                            <div className="grid gap-2">
                                 <Label htmlFor="email">Email address</Label>
                                 <Input
                                     id="email"
                                     type="email"
                                     required
-                                    tabIndex={2}
+                                    tabIndex={3}
                                     autoComplete="email"
                                     name="email"
                                     placeholder="email@example.com"
@@ -73,7 +80,7 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                                 <PasswordInput
                                     id="password"
                                     required
-                                    tabIndex={3}
+                                    tabIndex={4}
                                     autoComplete="new-password"
                                     name="password"
                                     placeholder="Password"
@@ -89,7 +96,7 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                                 <PasswordInput
                                     id="password_confirmation"
                                     required
-                                    tabIndex={4}
+                                    tabIndex={5}
                                     autoComplete="new-password"
                                     name="password_confirmation"
                                     placeholder="Confirm password"
@@ -103,7 +110,7 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                             <Button
                                 type="submit"
                                 className="mt-2 w-full"
-                                tabIndex={5}
+                                tabIndex={6}
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
@@ -114,18 +121,8 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                         <div className="text-muted-foreground text-center text-sm">
                             Already have an account?{' '}
                             <TextLink
-                                href={
-                                    teamInvitation
-                                        ? login.url({
-                                              query: {
-                                                  invitation:
-                                                      teamInvitation.code,
-                                              },
-                                          })
-                                        : login()
-                                }
-                                data-test="team-invitation-login-link"
-                                tabIndex={6}
+                                href={login()}
+                                tabIndex={7}
                             >
                                 Log in
                             </TextLink>

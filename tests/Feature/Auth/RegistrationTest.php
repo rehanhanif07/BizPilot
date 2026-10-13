@@ -1,10 +1,7 @@
 <?php
 
-use App\Enums\TeamRole;
-use App\Models\Team;
-use App\Models\TeamInvitation;
+use App\Models\Organization;
 use App\Models\User;
-use Inertia\Testing\AssertableInertia as Assert;
 
 test('registration screen can be rendered', function () {
     $response = $this->get(route('register'));
@@ -12,28 +9,30 @@ test('registration screen can be rendered', function () {
     $response->assertOk();
 });
 
-test('registration screen includes team invitation context', function () {
-    $owner = User::factory()->create();
-    $team = Team::factory()->create(['name' => 'Laravel Team']);
-    $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-
-    $invitation = TeamInvitation::factory()->create([
-        'team_id' => $team->id,
-        'email' => 'invited@example.com',
-        'invited_by' => $owner->id,
+test('new users can register and get an organization they own', function () {
+    $response = $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'organization_name' => 'Acme Ltd',
+        'password' => 'password',
+        'password_confirmation' => 'password',
     ]);
 
-    $response = $this->get(route('register', ['invitation' => $invitation->code]));
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('dashboard'));
 
-    $response->assertOk();
-    $response->assertInertia(fn (Assert $page) => $page
-        ->component('auth/register')
-        ->where('teamInvitation.code', $invitation->code)
-        ->where('teamInvitation.teamName', 'Laravel Team'),
-    );
+    $user = User::where('email', 'test@example.com')->firstOrFail();
+    $organization = Organization::where('name', 'Acme Ltd')->firstOrFail();
+
+    expect($user->current_organization_id)->toBe($organization->id);
+    $this->assertDatabaseHas('organization_users', [
+        'organization_id' => $organization->id,
+        'user_id' => $user->id,
+        'role' => 'owner',
+    ]);
 });
 
-test('new users can register', function () {
+test('organization name is required to register', function () {
     $response = $this->post(route('register.store'), [
         'name' => 'Test User',
         'email' => 'test@example.com',
@@ -41,8 +40,22 @@ test('new users can register', function () {
         'password_confirmation' => 'password',
     ]);
 
-    $this->assertAuthenticated();
+    $response->assertSessionHasErrors('organization_name');
+    $this->assertGuest();
+    $this->assertDatabaseCount('users', 0);
+});
 
-    $user = User::where('email', 'test@example.com')->first();
-    $response->assertRedirect(route('dashboard'));
+test('organizations with the same name get distinct slugs', function () {
+    foreach (['first@example.com', 'second@example.com'] as $email) {
+        $this->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => $email,
+            'organization_name' => 'Acme Ltd',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+        auth()->logout();
+    }
+
+    expect(Organization::where('name', 'Acme Ltd')->pluck('slug')->unique())->toHaveCount(2);
 });
